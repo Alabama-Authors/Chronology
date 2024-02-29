@@ -21,8 +21,32 @@
             overflow: hidden;
         }
 
+        h1 {
+            font: 2rem sans-serif;
+            font-weight: 800;
+        }
+
+        #header-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            padding-left: 4rem;
+            padding-right: 4rem;
+        }
+
+        #dropdown-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: .5rem;
+            font: .8rem sans-serif;
+            font-weight: 600;
+        }
+
         #chronology {
-            height: 83vh;
+            height: 70vh;
             overflow-y: hidden;
             overflow-x: hidden;
         }
@@ -41,9 +65,19 @@
             box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
             pointer-events: none;
         }
+
+        #dropdown {
+            font-family: sans-serif;
+        }
     </style>
 
-    <div id="dropdown"></div>
+    <div id="header-container">
+        <h1>Alabama Authors Chronology</h1>
+        <div id="dropdown-container">
+            <p>Sort By</p>
+            <div id="dropdown"></div>
+        </div>
+    </div>
     <svg id="top-axis"></svg>
     <div id="chronology"></div>
     <svg id="bottom-axis"></svg>
@@ -56,13 +90,13 @@
                 d.Birth_Date = new Date(d.Birth_Date);
                 d.Death_Date = new Date(d.Death_Date);
                 // remove entries that don't have a birth and/or death year
-                return !isNaN(d.Birth_Date.getTime()) && !isNaN(d.Death_Date.getTime());
+                return !isNaN(d.Birth_Date.getTime()) && !isNaN(d.Death_Date.getTime()) && d.Page_Link !== undefined && d.Page_Link !== null && d.Page_Link.trim() !== "";
             });
 
             // create sort dropdown
             // credit: https://dev.to/learningmonk/sortable-bar-chart-with-d3-js-k3b
             var dropdown = document.getElementById("dropdown");
-            var sort = ["Alphabetically", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
+            var sort = ["Alphabetical", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
             document.addEventListener("DOMContentLoaded", createChronology());
             d3.select(dropdown)
                 .append("span")
@@ -218,14 +252,30 @@
                         tooltip.transition()
                             .duration(200)
                             .style("opacity", 1);
-                        tooltip.html(
-                            `<img src="./images/${d.Image_Name}" alt="${d.Author_First_Name_Last_Name}" width="200"}<br><br><br>` +
-                            `<strong>${d.Author_Last_Name_First_Name_Author_Dates}</strong><br>` +
-                            `Years Lived: ${d.Lifespan}<br>` +
-                            `County: ${d.County}`
-                        )
+
+                        // display data if it exists
+                        var tooltipHTML = "";
+                        if (d.Image_Name) {
+                            tooltipHTML += `<img src="./images/${d.Image_Name}" alt="${d.Author_First_Name_Last_Name}" width="200"><br><br><br>`;
+                        }
+                        tooltipHTML += `<strong>${d.Author_Last_Name_First_Name_Author_Dates}</strong><br>`;
+                        if (d.Author_Pseudonym_Name) {
+                            tooltipHTML += `${d.Author_Pseudonym_Name}<br>`;
+                        }
+                        if (d.Lifespan) {
+                            tooltipHTML += `<br>Years Lived: ${d.Lifespan}<br>`;
+                        }
+                        if (d.County) {
+                            tooltipHTML += `County: ${d.County}<br>`;
+                        }
+                        if (d.City) {
+                            tooltipHTML += `City: ${d.City}`;
+                        }
+
+                        tooltip.html(tooltipHTML)
                             .style("left", (event.pageX) + "px")
                             .style("top", (event.pageY - 28) + "px");
+
                         d3.select(this).attr("opacity", 0.7);
                     })
                     .on("mouseout", function (d) {
@@ -246,7 +296,7 @@
                 function zoom(svg) {
                     var extent = [[margins.left, margins.right], [innerWidth - margins.left, innerHeight - margins.top]];
                     svg.call(d3.zoom()
-                        .scaleExtent([1, 50])
+                        .scaleExtent([1, 8])
                         .translateExtent(extent)
                         .extent(extent)
                         .on("zoom", zoomed));

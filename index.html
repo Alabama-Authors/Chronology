@@ -36,22 +36,14 @@
             padding-right: 4rem;
         }
 
-        #sort-container {
+        .dropdown {
             display: flex;
             flex-direction: row;
             align-items: center;
             gap: .5rem;
             font: .8rem sans-serif;
             font-weight: 600;
-        }
-
-        #filter-container {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: .5rem;
-            font: .8rem sans-serif;
-            font-weight: 600;
+            font-family: sans-serif;
         }
 
         #chronology {
@@ -75,14 +67,6 @@
             pointer-events: none;
         }
 
-        #sort {
-            font-family: sans-serif;
-        }
-
-        #filter {
-            font-family: sans-serif;
-        }
-
         #container {
             display: flex;
             flex-direction: row;
@@ -93,13 +77,17 @@
     <div id="header-container">
         <h1>Alabama Authors Chronology</h1>
         <div id="container">
-            <div id="sort-container">
+            <div id="sort-container" class="dropdown">
                 <p>Sort By</p>
                 <div id="sort"></div>
             </div>
-            <div id="filter-container">
+            <div id="filter-container" class="dropdown">
                 <p>Filter By</p>
                 <div id="filter"></div>
+            </div>
+            <div id="view-container" class="dropdown">
+                <p>View</p>
+                <div id="view"></div>
             </div>
         </div>
     </div>
@@ -109,285 +97,337 @@
     <div class="tooltip" style="opacity: 0;"></div>
 
     <script>
-        // import data from export.csv and convert date into death year, birth year, and lifespan
-        d3.csv("export.csv").then(function (data) {
-            data = data.filter(function (d) {
-                var years = d["Dublin Core:Date"].split("-");
-                var birthYear = parseInt(years[0]);
-                var deathYear = years[1];
+        var sortDropdown = document.getElementById("sort");
+        var sort = ["Alphabetically", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
+        d3.select(sortDropdown)
+            .append("span")
+            .append("select")
+            .attr("id", "sort-selection")
+            .selectAll("option")
+            .data(sort)
+            .enter()
+            .append("option")
+            .attr("value", d => d)
+            .text(d => d);
 
-                // skip entries that have an unknown death year
-                if (deathYear === "unknown") {
-                    return false;
-                }
+        var filterDropdown = document.getElementById("filter");
+        var filter = ["All Authors", "Authors With Links", "Authors With Images", "Authors With Links and Images"];
+        d3.select(filterDropdown)
+            .append("span")
+            .append("select")
+            .attr("id", "filter-selection")
+            .selectAll("option")
+            .data(filter)
+            .enter()
+            .append("option")
+            .attr("value", d => d)
+            .text(d => d);
 
-                // make the year the current year if the death year is listed as present
-                if (deathYear === "present") {
-                    deathYear = new Date().getFullYear();
-                }
-                else {
-                    deathYear = parseInt(years[1]);
-                }
+        function resetSortDropdown() {
+            document.getElementById("sort-selection").selectedIndex = 0;
+        }
 
-                d.birth_year = new Date(birthYear, 0, 1);
-                d.death_year = new Date(deathYear, 0, 1);
-                d.lifespan = parseInt(deathYear) - parseInt(birthYear);
+        function resetFilterDropdown() {
+            document.getElementById("filter-selection").selectedIndex = 0;
+        }
 
-                return true;
-            });
+        var csv = "export.csv";
+        var viewDropdown = document.getElementById("view");
+        var viewOptions = ["150", "1700"];
+        d3.select(viewDropdown)
+            .append("span")
+            .append("select")
+            .attr("id", "view-selection")
+            .selectAll("option")
+            .data(viewOptions)
+            .enter()
+            .append("option")
+            .attr("value", d => d)
+            .text(d => d);
 
-            // create sort dropdown
-            // credit: https://dev.to/learningmonk/sortable-bar-chart-with-d3-js-k3b
-            data.sort((a, b) => {
-                return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
-            });
+        d3.select("#view-selection").on("change", function () {
+            var selectedView = d3.select(this).node().value;
+            if (selectedView == "150") {
+                csv = "export.csv";
+            } else if (selectedView == "1700") {
+                csv = "authors.csv";
+            }
+            resetSortDropdown();
+            resetFilterDropdown();
+            processData();
+        });
+        processData();
 
-            var sortDropdown = document.getElementById("sort");
-            var sort = ["Alphabetically", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
-            document.addEventListener("DOMContentLoaded", createChronology());
-            d3.select(sortDropdown)
-                .append("span")
-                .append("select")
-                .attr("id", "sort-selection")
-                .selectAll("option")
-                .data(sort)
-                .enter()
-                .append("option")
-                .attr("value", d => d)
-                .text(d => d);
+        function processData() {
 
-            // sort data based on dropdown selection
-            d3.select("#sort-selection").on("change", function () {
-                var selected = d3.select(this).node().value;
-                if (selected == "Alphabetically") {
-                    data.sort((a, b) => {
-                        return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
-                    })
-                    console.log(data)
-                } else if (selected == "Ascending Birth Year") {
-                    data.sort((a, b) => {
-                        return d3.ascending(a.birth_year, b.birth_year)
-                    })
-                } else if (selected == "Descending Birth Year") {
-                    data.sort((a, b) => {
-                        return d3.descending(a.birth_year, b.birth_year)
-                    })
-                } else if (selected == "Ascending Death Year") {
-                    data.sort((a, b) => {
-                        return d3.ascending(a.death_year, b.death_year)
-                    })
-                } else if (selected == "Descending Death Year") {
-                    data.sort((a, b) => {
-                        return d3.descending(a.death_year, b.death_year)
-                    })
-                } else if (selected == "Ascending Lifespan") {
-                    data.sort((a, b) => {
-                        return d3.ascending(a.lifespan, b.lifespan)
-                    })
-                } else if (selected == "Descending Lifespan") {
-                    data.sort((a, b) => {
-                        return d3.descending(a.lifespan, b.lifespan)
-                    })
-                }
-                createChronology();
-            })
+            // import data from export.csv and convert date into death year, birth year, and lifespan
+            d3.csv(csv).then(function (data) {
+                data = data.filter(function (d) {
+                    var years = d["Dublin Core:Date"].split("-");
+                    var birthYear = parseInt(years[0]);
+                    var deathYear = years[1];
 
-            var filterDropdown = document.getElementById("filter");
-            var filter = ["All Authors", "Authors With Links", "Authors With Images", "Authors With Links and Images"];
-            d3.select(filterDropdown)
-                .append("span")
-                .append("select")
-                .attr("id", "filter-selection")
-                .selectAll("option")
-                .data(filter)
-                .enter()
-                .append("option")
-                .attr("value", d => d)
-                .text(d => d);
+                    // skip entries that have an unknown death year
+                    if (deathYear === "unknown") {
+                        return false;
+                    }
 
-            // sort data based on dropdown selection
-            var allData = data;
-            d3.select("#filter-selection").on("change", function () {
-                var selected = d3.select(this).node().value;
-                if (selected == "All Authors") {
-                    data = allData;
-                }
-                else if (selected == "Authors With Links") {
-                    data = allData.filter((d) => {
-                        return d["Item URI"].trim() !== "";
-                    })
-                }
-                else if (selected == "Authors With Images") {
-                    data = allData.filter((d) => {
-                        return d["file"].trim() !== "";
-                    })
-                }
-                else if (selected == "Authors With Links and Images") {
-                    data = allData.filter((d) => {
-                        return d["Item URI"].trim() !== "" && d["file"].trim() !== "";
-                    })
-                }
-                createChronology();
-            })
+                    // make the year the current year if the death year is listed as present
+                    if (deathYear === "present") {
+                        deathYear = new Date().getFullYear();
+                    }
+                    else {
+                        deathYear = parseInt(years[1]);
+                    }
 
-            function createChronology() {
-                // use tableu 10 color scheme
-                var colors = {
-                    "1700-1800": "#5778a4",
-                    "1800-1900": "#e49444",
-                    "1900-2000": "#6a9f58",
-                    // "1900-1950": "#85b6b2",
-                    // "1950-2000": "#f1a2a9"
-                };
+                    d.birth_year = new Date(birthYear, 0, 1);
+                    d.death_year = new Date(deathYear, 0, 1);
+                    d.lifespan = parseInt(deathYear) - parseInt(birthYear);
 
-                // create base viz
-                var margins = { top: 64, left: 64, bottom: 64, right: 64 }
-                var width = window.innerWidth;
-                var height = window.innerHeight - 128;
-                var innerWidth = width - margins.left - margins.right;
-                var innerHeight = height - margins.top - margins.bottom;
-
-                var chronology = document.createElement("div");
-                var svg = d3.select(chronology)
-                    .append("svg")
-                    .attr("width", width)
-                    .attr("height", innerHeight)
-                    .call(zoom);
-
-                // create top and bottom year axes
-                var x = d3.scaleTime()
-                    .domain([d3.min(data, function (d) { return d.birth_year; }), d3.max(data, function (d) { return d.death_year; })])
-                    .range([0, innerWidth]);
-
-                var y = d3.scaleBand()
-                    .domain(data.map(function (d) { return d["Dublin Core:Title"]; }))
-                    .range([0, innerHeight])
-                    .padding(0.1);
-
-                var topAxis = d3.select("#top-axis")
-                    .attr("width", width)
-                    .attr("height", margins.top);
-
-                topAxis.append("g")
-                    .attr("transform", `translate(${margins.top}, ${margins.left})`)
-                    .call(d3.axisTop(x));
-
-                var bottomAxis = d3.select("#bottom-axis")
-                    .attr("width", width)
-                    .attr("height", margins.bottom);
-
-                bottomAxis.append("g")
-                    .attr("transform", `translate(${margins.left}, 0)`)
-                    .call(d3.axisBottom(x));
-
-                var tooltip = d3.select(".tooltip");
-
-                // create a line to help with comparing the bars to the axes
-                var line = svg.append("line")
-                    .attr("class", "line")
-                    .style("stroke", "black")
-                    .style("stroke-width", 1)
-                    .style("opacity", .2)
-                svg.on("mousemove", function (event) {
-                    var mouseX = d3.pointer(event)[0];
-                    line
-                        .attr("x1", mouseX)
-                        .attr("y1", 0)
-                        .attr("x2", mouseX)
-                        .attr("y2", height);
+                    return true;
                 });
 
-                // add a bar for each author and make it span their birth to death year
-                svg.selectAll(".author")
-                    .data(data)
-                    .enter().append("rect")
-                    .attr("class", "author")
-                    .attr("x", function (d) { return x(d.birth_year) + margins.left; })
-                    .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
-                    .attr("width", function (d) { return x(d.death_year) - x(d.birth_year); })
-                    .attr("height", y.bandwidth())
-                    .attr("fill", function (d) {
-                        var birth = d.birth_year.getFullYear();
-                        if (birth >= 1700 && birth < 1800) {
-                            return colors["1700-1800"];
-                        } else if (birth >= 1800 && birth < 1900) {
-                            return colors["1800-1900"];
-                        } else if (birth >= 1900 && birth < 2000) {
-                            return colors["1900-2000"];
-                        } else {
-                            return "#000000";
-                        }
-                    })
-                    .each(function (d) {
-                        if (d["Item URI"]) {
-                            d3.select(this).style("cursor", "pointer");
-                        }
-                    })
-                    // open author page on click
-                    .on("click", function (event, d) {
-                        if (d["Item URI"]) {
-                            window.open(d["Item URI"], "_blank");
-                        }
-                    })
-                    // add a tooltip with author info on hover
-                    .on("mouseover", function (event, d) {
-                        tooltip.transition()
-                            .duration(200)
-                            .style("opacity", 1);
+                // create sort dropdown
+                // credit: https://dev.to/learningmonk/sortable-bar-chart-with-d3-js-k3b
 
-                        // display data if it exists
-                        var tooltipHTML = "";
-                        if (d["file"]) {
-                            var photos = d["file"].split(",");
-                            tooltipHTML += `<img src="${photos[photos.length - 1]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
-                        }
-                        tooltipHTML += `<strong>${d["Dublin Core:Title"]} (${d["Dublin Core:Date"]})</strong><br>`;
-                        if (d.lifespan) {
-                            tooltipHTML += `Years Lived: ${d.lifespan}<br>`;
-                        }
 
-                        tooltip.html(tooltipHTML)
-                            .style("left", (event.pageX) + "px")
-                            .style("top", (event.pageY - 28) + "px");
+                data.sort((a, b) => {
+                    return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
+                });
+                document.addEventListener("DOMContentLoaded", createChronology());
+                createChronology();
 
-                        d3.select(this).attr("opacity", 0.7);
-                    })
-                    .on("mouseout", function (d) {
-                        tooltip.transition()
-                            .duration(500)
-                            .style("opacity", 0);
-                        d3.select(this).attr("opacity", 1);
+                // sort data based on dropdown selection
+                d3.select("#sort-selection").on("change", function () {
+                    var selected = d3.select(this).node().value;
+                    if (selected == "Alphabetically") {
+                        data.sort((a, b) => {
+                            return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
+                        })
+                        console.log(data)
+                    } else if (selected == "Ascending Birth Year") {
+                        data.sort((a, b) => {
+                            return d3.ascending(a.birth_year, b.birth_year)
+                        })
+                    } else if (selected == "Descending Birth Year") {
+                        data.sort((a, b) => {
+                            return d3.descending(a.birth_year, b.birth_year)
+                        })
+                    } else if (selected == "Ascending Death Year") {
+                        data.sort((a, b) => {
+                            return d3.ascending(a.death_year, b.death_year)
+                        })
+                    } else if (selected == "Descending Death Year") {
+                        data.sort((a, b) => {
+                            return d3.descending(a.death_year, b.death_year)
+                        })
+                    } else if (selected == "Ascending Lifespan") {
+                        data.sort((a, b) => {
+                            return d3.ascending(a.lifespan, b.lifespan)
+                        })
+                    } else if (selected == "Descending Lifespan") {
+                        data.sort((a, b) => {
+                            return d3.descending(a.lifespan, b.lifespan)
+                        })
+                    }
+                    createChronology();
+                })
+
+
+
+                // sort data based on dropdown selection
+                var allData = data;
+                d3.select("#filter-selection").on("change", function () {
+                    var selected = d3.select(this).node().value;
+                    if (selected == "All Authors") {
+                        data = allData;
+                    }
+                    else if (selected == "Authors With Links") {
+                        data = allData.filter((d) => {
+                            return d["Item URI"].trim() !== "";
+                        })
+                    }
+                    else if (selected == "Authors With Images") {
+                        data = allData.filter((d) => {
+                            return d["file"].trim() !== "";
+                        })
+                    }
+                    else if (selected == "Authors With Links and Images") {
+                        data = allData.filter((d) => {
+                            return d["Item URI"].trim() !== "" && d["file"].trim() !== "";
+                        })
+                    }
+                    createChronology();
+                })
+
+                function createChronology() {
+                    // use tableu 10 color scheme
+                    var colors = {
+                        "1700-1800": "#5778a4",
+                        "1800-1900": "#e49444",
+                        "1900-2000": "#6a9f58",
+                        // "1900-1950": "#85b6b2",
+                        // "1950-2000": "#f1a2a9"
+                    };
+
+                    // create base viz
+                    var margins = { top: 64, left: 64, bottom: 64, right: 64 }
+                    var width = window.innerWidth;
+                    var height = window.innerHeight - 128;
+                    var innerWidth = width - margins.left - margins.right;
+                    var innerHeight = height - margins.top - margins.bottom;
+
+                    var chronology = document.createElement("div");
+                    var svg = d3.select(chronology)
+                        .append("svg")
+                        .attr("width", width)
+                        .attr("height", innerHeight)
+                        .call(zoom);
+
+                    // create top and bottom year axes
+                    var x = d3.scaleTime()
+                        .domain([d3.min(data, function (d) { return d.birth_year; }), d3.max(data, function (d) { return d.death_year; })])
+                        .range([0, innerWidth]);
+
+                    var y = d3.scaleBand()
+                        .domain(data.map(function (d) { return d["Dublin Core:Title"]; }))
+                        .range([0, innerHeight])
+                        .padding(0.1);
+
+                    var topAxis = d3.select("#top-axis")
+                        .attr("width", width)
+                        .attr("height", margins.top);
+
+                    topAxis.append("g")
+                        .attr("transform", `translate(${margins.top}, ${margins.left})`)
+                        .call(d3.axisTop(x));
+
+                    var bottomAxis = d3.select("#bottom-axis")
+                        .attr("width", width)
+                        .attr("height", margins.bottom);
+
+                    bottomAxis.append("g")
+                        .attr("transform", `translate(${margins.left}, 0)`)
+                        .call(d3.axisBottom(x));
+
+                    var tooltip = d3.select(".tooltip");
+
+                    // create a line to help with comparing the bars to the axes
+                    var line = svg.append("line")
+                        .attr("class", "line")
+                        .style("stroke", "black")
+                        .style("stroke-width", 1)
+                        .style("opacity", .2)
+                    svg.on("mousemove", function (event) {
+                        var mouseX = d3.pointer(event)[0];
+                        line
+                            .attr("x1", mouseX)
+                            .attr("y1", 0)
+                            .attr("x2", mouseX)
+                            .attr("y2", height);
                     });
 
-                // create new viz when a sort option is selected
-                var newChronology = document.getElementById("chronology");
-                while (newChronology.firstChild) {
-                    newChronology.firstChild.remove();
-                }
-                newChronology.appendChild(chronology);
+                    // add a bar for each author and make it span their birth to death year
+                    svg.selectAll(".author")
+                        .data(data)
+                        .enter().append("rect")
+                        .attr("class", "author")
+                        .attr("x", function (d) { return x(d.birth_year) + margins.left; })
+                        .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
+                        .attr("width", function (d) { return x(d.death_year) - x(d.birth_year); })
+                        .attr("height", y.bandwidth())
+                        .attr("fill", function (d) {
+                            var birth = d.birth_year.getFullYear();
+                            if (birth >= 1700 && birth < 1800) {
+                                return colors["1700-1800"];
+                            } else if (birth >= 1800 && birth < 1900) {
+                                return colors["1800-1900"];
+                            } else if (birth >= 1900 && birth < 2000) {
+                                return colors["1900-2000"];
+                            } else {
+                                return "#000000";
+                            }
+                        })
+                        .each(function (d) {
+                            if (d["Item URI"]) {
+                                d3.select(this).style("cursor", "pointer");
+                            }
+                        })
+                        // open author page on click
+                        .on("click", function (event, d) {
+                            if (d["Item URI"]) {
+                                window.open(d["Item URI"], "_blank");
+                            }
+                        })
+                        // add a tooltip with author info on hover
+                        .on("mouseover", function (event, d) {
+                            tooltip.transition()
+                                .duration(200)
+                                .style("opacity", 1);
 
-                // make the viz zoomable
-                function zoom(svg) {
-                    var extent = [[margins.left, margins.right], [innerWidth - margins.left, innerHeight - margins.top]];
-                    svg.call(d3.zoom()
-                        .scaleExtent([1, 8])
-                        .translateExtent(extent)
-                        .extent(extent)
-                        .on("zoom", zoomed));
+                            // display data if it exists
+                            var tooltipHTML = "";
+                            if (d["file"]) {
+                                if (csv === "authors.csv") {
+                                    tooltipHTML += `<img src="./images/${d["file"]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
+                                }
+                                else if (csv === "export.csv") {
+                                    var photos = d["file"].split(",");
+                                    tooltipHTML += `<img src="${photos[photos.length - 1]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
+                                }
+                            }
+                            tooltipHTML += `<strong>${d["Dublin Core:Title"]} (${d["Dublin Core:Date"]})</strong><br>`;
+                            if (d.lifespan) {
+                                tooltipHTML += `Years Lived: ${d.lifespan}<br>`;
+                            }
 
-                    function zoomed(event) {
-                        y.range([margins.top, innerHeight - margins.bottom].map(d => event.transform.applyY(d)));
-                        svg.selectAll(".author")
-                            .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
-                            .attr("height", y.bandwidth());
-                        svg.select("#top-axis").call(d3.axisTop(y));
-                        svg.select("#bottom-axis").call(d3.axisBottom(y));
+                            tooltip.html(tooltipHTML)
+                                .style("left", (event.pageX) + "px")
+                                .style("top", (event.pageY - 28) + "px");
+
+                            d3.select(this).attr("opacity", 0.7);
+                        })
+                        .on("mouseout", function (d) {
+                            tooltip.transition()
+                                .duration(500)
+                                .style("opacity", 0);
+                            d3.select(this).attr("opacity", 1);
+                        });
+
+                    // create new viz when a sort option is selected
+                    var newChronology = document.getElementById("chronology");
+                    while (newChronology.firstChild) {
+                        newChronology.firstChild.remove();
+                    }
+                    newChronology.appendChild(chronology);
+                    d3.select("#top-axis").call(d3.axisTop(x));
+                    d3.select("#bottom-axis").call(d3.axisBottom(x));
+
+                    // make the viz zoomable
+                    function zoom(svg) {
+                        var extent = [[margins.left, margins.right], [innerWidth - margins.left, innerHeight - margins.top]];
+                        svg.call(d3.zoom()
+                            .scaleExtent([1, 0.1 * data.length])
+                            .translateExtent(extent)
+                            .extent(extent)
+                            .on("zoom", zoomed));
+
+                        function zoomed(event) {
+                            y.range([margins.top, innerHeight - margins.bottom].map(d => event.transform.applyY(d)));
+                            svg.selectAll(".author")
+                                .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
+                                .attr("height", y.bandwidth());
+                            svg.select("#top-axis").call(d3.axisTop(y));
+                            svg.select("#bottom-axis").call(d3.axisBottom(y));
+                        }
                     }
                 }
-            }
-        }).catch(function (error) {
-            console.error("error loading csv: " + error);
-        });
+            }).catch(function (error) {
+                console.error("error loading csv: " + error);
+            });
+        }
+
+
 
     </script>
 

@@ -84,19 +84,41 @@
     <div class="tooltip" style="opacity: 0;"></div>
 
     <script>
-        // import data from authors.csv and convert birth and death years to JS dates
-        d3.csv("authors.csv").then(function (data) {
+        // import data from export.csv and convert date into death year, birth year, and lifespan
+        d3.csv("export.csv").then(function (data) {
             data = data.filter(function (d) {
-                d.Birth_Date = new Date(d.Birth_Date);
-                d.Death_Date = new Date(d.Death_Date);
-                // remove entries that don't have a birth and/or death year
-                return !isNaN(d.Birth_Date.getTime()) && !isNaN(d.Death_Date.getTime()) && d.Page_Link !== undefined && d.Page_Link !== null && d.Page_Link.trim() !== "";
+                var years = d["Dublin Core:Date"].split("-");
+                var birthYear = parseInt(years[0]);
+                var deathYear = years[1];
+
+                // skip entries that have an unknown death year
+                if (deathYear === "unknown") {
+                    return false;
+                }
+
+                // make the year the current year if the death year is listed as present
+                if (deathYear === "present") {
+                    deathYear = new Date().getFullYear();
+                }
+                else {
+                    deathYear = parseInt(years[1]);
+                }
+
+                d.birth_year = new Date(birthYear, 0, 1);
+                d.death_year = new Date(deathYear, 0, 1);
+                d.lifespan = parseInt(deathYear) - parseInt(birthYear);
+
+                return true;
             });
 
             // create sort dropdown
             // credit: https://dev.to/learningmonk/sortable-bar-chart-with-d3-js-k3b
+            data.sort((a, b) => {
+                return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
+            });
+
             var dropdown = document.getElementById("dropdown");
-            var sort = ["Alphabetical", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
+            var sort = ["Alphabetically", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
             document.addEventListener("DOMContentLoaded", createChronology());
             d3.select(dropdown)
                 .append("span")
@@ -114,31 +136,32 @@
                 var selected = d3.select(this).node().value;
                 if (selected == "Alphabetically") {
                     data.sort((a, b) => {
-                        return d3.ascending(a.Author_Last_Name_First_Name_Author_Dates, b.Author_Last_Name_First_Name_Author_Dates)
+                        return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
                     })
+                    console.log(data)
                 } else if (selected == "Ascending Birth Year") {
                     data.sort((a, b) => {
-                        return d3.ascending(a.Birth_Date, b.Birth_Date)
+                        return d3.ascending(a.birth_year, b.birth_year)
                     })
                 } else if (selected == "Descending Birth Year") {
                     data.sort((a, b) => {
-                        return d3.descending(a.Birth_Date, b.Birth_Date)
+                        return d3.descending(a.birth_year, b.birth_year)
                     })
                 } else if (selected == "Ascending Death Year") {
                     data.sort((a, b) => {
-                        return d3.ascending(a.Death_Date, b.Death_Date)
+                        return d3.ascending(a.death_year, b.death_year)
                     })
                 } else if (selected == "Descending Death Year") {
                     data.sort((a, b) => {
-                        return d3.descending(a.Death_Date, b.Death_Date)
+                        return d3.descending(a.death_year, b.death_year)
                     })
                 } else if (selected == "Ascending Lifespan") {
                     data.sort((a, b) => {
-                        return d3.ascending(a.Lifespan, b.Lifespan)
+                        return d3.ascending(a.lifespan, b.lifespan)
                     })
                 } else if (selected == "Descending Lifespan") {
                     data.sort((a, b) => {
-                        return d3.descending(a.Lifespan, b.Lifespan)
+                        return d3.descending(a.lifespan, b.lifespan)
                     })
                 }
                 createChronology();
@@ -147,11 +170,11 @@
             function createChronology() {
                 // use tableu 10 color scheme
                 var colors = {
-                    "1750-1800": "#5778a4",
-                    "1800-1850": "#e49444",
-                    "1850-1900": "#85b6b2",
-                    "1900-1950": "#6a9f58",
-                    "1950-2000": "#f1a2a9"
+                    "1700-1800": "#5778a4",
+                    "1800-1900": "#e49444",
+                    "1900-2000": "#6a9f58",
+                    // "1900-1950": "#85b6b2",
+                    // "1950-2000": "#f1a2a9"
                 };
 
                 // create base viz
@@ -170,11 +193,11 @@
 
                 // create top and bottom year axes
                 var x = d3.scaleTime()
-                    .domain([d3.min(data, function (d) { return d.Birth_Date; }), d3.max(data, function (d) { return d.Death_Date; })])
+                    .domain([d3.min(data, function (d) { return d.birth_year; }), d3.max(data, function (d) { return d.death_year; })])
                     .range([0, innerWidth]);
 
                 var y = d3.scaleBand()
-                    .domain(data.map(function (d) { return d.Author_Last_Name_First_Name_Author_Dates; }))
+                    .domain(data.map(function (d) { return d["Dublin Core:Title"]; }))
                     .range([0, innerHeight])
                     .padding(0.1);
 
@@ -216,35 +239,31 @@
                     .data(data)
                     .enter().append("rect")
                     .attr("class", "author")
-                    .attr("x", function (d) { return x(d.Birth_Date) + margins.left; })
-                    .attr("y", function (d, i) { return y(d.Author_Last_Name_First_Name_Author_Dates); })
-                    .attr("width", function (d) { return x(d.Death_Date) - x(d.Birth_Date); })
+                    .attr("x", function (d) { return x(d.birth_year) + margins.left; })
+                    .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
+                    .attr("width", function (d) { return x(d.death_year) - x(d.birth_year); })
                     .attr("height", y.bandwidth())
                     .attr("fill", function (d) {
-                        var birth = d.Birth_Date.getFullYear();
-                        if (birth >= 1750 && birth < 1800) {
-                            return colors["1750-1800"];
-                        } else if (birth >= 1800 && birth < 1850) {
-                            return colors["1800-1850"];
-                        } else if (birth >= 1850 && birth < 1900) {
-                            return colors["1850-1900"];
-                        } else if (birth >= 1900 && birth < 1950) {
-                            return colors["1900-1950"];
-                        } else if (birth >= 1950 && birth <= 2000) {
-                            return colors["1950-2000"];
+                        var birth = d.birth_year.getFullYear();
+                        if (birth >= 1700 && birth < 1800) {
+                            return colors["1700-1800"];
+                        } else if (birth >= 1800 && birth < 1900) {
+                            return colors["1800-1900"];
+                        } else if (birth >= 1900 && birth < 2000) {
+                            return colors["1900-2000"];
                         } else {
                             return "#000000";
                         }
                     })
                     .each(function (d) {
-                        if (d.Page_Link) {
+                        if (d["Item URI"]) {
                             d3.select(this).style("cursor", "pointer");
                         }
                     })
                     // open author page on click
                     .on("click", function (event, d) {
-                        if (d.Page_Link) {
-                            window.open(d.Page_Link, "_blank");
+                        if (d["Item URI"]) {
+                            window.open(d["Item URI"], "_blank");
                         }
                     })
                     // add a tooltip with author info on hover
@@ -255,21 +274,13 @@
 
                         // display data if it exists
                         var tooltipHTML = "";
-                        if (d.Image_Name) {
-                            tooltipHTML += `<img src="./images/${d.Image_Name}" alt="${d.Author_First_Name_Last_Name}" width="200"><br><br><br>`;
+                        if (d["file"]) {
+                            var photos = d["file"].split(",");
+                            tooltipHTML += `<img src="${photos[photos.length - 1]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
                         }
-                        tooltipHTML += `<strong>${d.Author_Last_Name_First_Name_Author_Dates}</strong><br>`;
-                        if (d.Author_Pseudonym_Name) {
-                            tooltipHTML += `${d.Author_Pseudonym_Name}<br>`;
-                        }
-                        if (d.Lifespan) {
-                            tooltipHTML += `<br>Years Lived: ${d.Lifespan}<br>`;
-                        }
-                        if (d.County) {
-                            tooltipHTML += `County: ${d.County}<br>`;
-                        }
-                        if (d.City) {
-                            tooltipHTML += `City: ${d.City}`;
+                        tooltipHTML += `<strong>${d["Dublin Core:Title"]} (${d["Dublin Core:Date"]})</strong><br>`;
+                        if (d.lifespan) {
+                            tooltipHTML += `Years Lived: ${d.lifespan}<br>`;
                         }
 
                         tooltip.html(tooltipHTML)
@@ -304,7 +315,7 @@
                     function zoomed(event) {
                         y.range([margins.top, innerHeight - margins.bottom].map(d => event.transform.applyY(d)));
                         svg.selectAll(".author")
-                            .attr("y", function (d, i) { return y(d.Author_Last_Name_First_Name_Author_Dates); })
+                            .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
                             .attr("height", y.bandwidth());
                         svg.select("#top-axis").call(d3.axisTop(y));
                         svg.select("#bottom-axis").call(d3.axisBottom(y));

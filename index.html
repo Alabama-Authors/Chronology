@@ -36,7 +36,16 @@
             padding-right: 4rem;
         }
 
-        #dropdown-container {
+        #sort-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: .5rem;
+            font: .8rem sans-serif;
+            font-weight: 600;
+        }
+
+        #filter-container {
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -66,16 +75,32 @@
             pointer-events: none;
         }
 
-        #dropdown {
+        #sort {
             font-family: sans-serif;
+        }
+
+        #filter {
+            font-family: sans-serif;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: row;
+            gap: 2rem;
         }
     </style>
 
     <div id="header-container">
         <h1>Alabama Authors Chronology</h1>
-        <div id="dropdown-container">
-            <p>Sort By</p>
-            <div id="dropdown"></div>
+        <div id="container">
+            <div id="sort-container">
+                <p>Sort By</p>
+                <div id="sort"></div>
+            </div>
+            <div id="filter-container">
+                <p>Filter By</p>
+                <div id="filter"></div>
+            </div>
         </div>
     </div>
     <svg id="top-axis"></svg>
@@ -117,13 +142,13 @@
                 return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
             });
 
-            var dropdown = document.getElementById("dropdown");
+            var sortDropdown = document.getElementById("sort");
             var sort = ["Alphabetically", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
             document.addEventListener("DOMContentLoaded", createChronology());
-            d3.select(dropdown)
+            d3.select(sortDropdown)
                 .append("span")
                 .append("select")
-                .attr("id", "selection")
+                .attr("id", "sort-selection")
                 .selectAll("option")
                 .data(sort)
                 .enter()
@@ -132,7 +157,7 @@
                 .text(d => d);
 
             // sort data based on dropdown selection
-            d3.select("#selection").on("change", function () {
+            d3.select("#sort-selection").on("change", function () {
                 var selected = d3.select(this).node().value;
                 if (selected == "Alphabetically") {
                     data.sort((a, b) => {
@@ -162,6 +187,44 @@
                 } else if (selected == "Descending Lifespan") {
                     data.sort((a, b) => {
                         return d3.descending(a.lifespan, b.lifespan)
+                    })
+                }
+                createChronology();
+            })
+
+            var filterDropdown = document.getElementById("filter");
+            var filter = ["All Authors", "Authors With Links", "Authors With Images", "Authors With Links and Images"];
+            d3.select(filterDropdown)
+                .append("span")
+                .append("select")
+                .attr("id", "filter-selection")
+                .selectAll("option")
+                .data(filter)
+                .enter()
+                .append("option")
+                .attr("value", d => d)
+                .text(d => d);
+
+            // sort data based on dropdown selection
+            var allData = data;
+            d3.select("#filter-selection").on("change", function () {
+                var selected = d3.select(this).node().value;
+                if (selected == "All Authors") {
+                    data = allData;
+                }
+                else if (selected == "Authors With Links") {
+                    data = allData.filter((d) => {
+                        return d["Item URI"].trim() !== "";
+                    })
+                }
+                else if (selected == "Authors With Images") {
+                    data = allData.filter((d) => {
+                        return d["file"].trim() !== "";
+                    })
+                }
+                else if (selected == "Authors With Links and Images") {
+                    data = allData.filter((d) => {
+                        return d["Item URI"].trim() !== "" && d["file"].trim() !== "";
                     })
                 }
                 createChronology();

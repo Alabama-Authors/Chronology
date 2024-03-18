@@ -9,6 +9,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <script src="https://d3js.org/d3.v7.min.js"></script>
 
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700"
+        rel="stylesheet">
+</head>
+
 <body>
 
     <style>
@@ -21,19 +28,48 @@
             overflow: hidden;
         }
 
+        strong {
+            font-weight: 600;
+        }
+
         h1 {
-            font: 2rem sans-serif;
-            font-weight: 800;
+            font-size: 2rem;
+            font-family: "Crimson Text", serif;
+            font-weight: 700;
+            font-style: normal;
+            line-height: 0;
+        }
+
+        select {
+            font-family: "Crimson Text", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 1rem;
+            padding: .25rem .5rem .25rem .5rem;
         }
 
         #header-container {
             display: flex;
+            flex-direction: column;
+            align-items: start;
+            padding-top: 2rem;
+            padding-left: 4rem;
+            padding-right: 4rem;
+            gap: 1rem;
+        }
+
+        #data-container {
+            display: flex;
             flex-direction: row;
             justify-content: space-between;
             align-items: center;
-            padding-top: 1rem;
-            padding-left: 4rem;
-            padding-right: 4rem;
+            width: 100%;
+        }
+
+        #select-container {
+            display: flex;
+            flex-direction: row;
+            gap: 2rem;
         }
 
         .dropdown {
@@ -41,19 +77,30 @@
             flex-direction: row;
             align-items: center;
             gap: .5rem;
-            font: .8rem sans-serif;
+            font-size: 1rem;
+            font-family: "Crimson Text", serif;
             font-weight: 600;
-            font-family: sans-serif;
+            font-style: normal;
+            line-height: 0;
+        }
+
+        #count {
+            font-family: "Crimson Text", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 1rem;
         }
 
         #chronology {
-            height: 70vh;
+            height: 64vh;
             overflow-y: hidden;
             overflow-x: hidden;
+
         }
 
         #bottom-axis {
-            padding-top: 4px;
+            padding-top: 0px;
+
         }
 
         .tooltip {
@@ -66,31 +113,31 @@
             box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
             pointer-events: none;
         }
-
-        #container {
-            display: flex;
-            flex-direction: row;
-            gap: 2rem;
-        }
     </style>
 
     <div id="header-container">
         <h1>Alabama Authors Chronology</h1>
-        <div id="container">
-            <div id="sort-container" class="dropdown">
-                <p>Sort By</p>
-                <div id="sort"></div>
-            </div>
-            <div id="filter-container" class="dropdown">
-                <p>Filter By</p>
-                <div id="filter"></div>
-            </div>
-            <div id="view-container" class="dropdown">
-                <p>View</p>
-                <div id="view"></div>
+        <div id="data-container">
+
+            <div id="count"></div>
+
+            <div id="select-container">
+                <div id="sort-container" class="dropdown">
+                    <p>Sort By</p>
+                    <div id="sort"></div>
+                </div>
+                <div id="filter-container" class="dropdown">
+                    <p>Filter By</p>
+                    <div id="filter"></div>
+                </div>
+                <div id="view-container" class="dropdown">
+                    <p>View</p>
+                    <div id="view"></div>
+                </div>
             </div>
         </div>
     </div>
+
     <svg id="top-axis"></svg>
     <div id="chronology"></div>
     <svg id="bottom-axis"></svg>
@@ -194,8 +241,10 @@
                 data.sort((a, b) => {
                     return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
                 });
+
                 document.addEventListener("DOMContentLoaded", createChronology());
                 createChronology();
+
 
                 // sort data based on dropdown selection
                 d3.select("#sort-selection").on("change", function () {
@@ -261,11 +310,13 @@
                 })
 
                 function createChronology() {
+                    var count = d3.select("#count")
+                        .html(`<strong>Number of Entries</strong>: ${data.length}`)
                     // use tableu 10 color scheme
                     var colors = {
-                        "1700-1800": "#5778a4",
-                        "1800-1900": "#e49444",
-                        "1900-2000": "#6a9f58",
+                        "1700-1800": "#e0585b",
+                        "1800-1900": "#f18f3b",
+                        "1900-2000": "#4e79a5",
                         // "1900-1950": "#85b6b2",
                         // "1950-2000": "#f1a2a9"
                     };
@@ -299,8 +350,11 @@
                         .attr("height", margins.top);
 
                     topAxis.append("g")
-                        .attr("transform", `translate(${margins.top}, ${margins.left})`)
-                        .call(d3.axisTop(x));
+                        .attr("transform", `translate(${margins.left}, ${margins.top})`)
+                        .call(d3.axisTop(x))
+                        .selectAll("text")
+                        .style("font-family", "Crimson Text, serif")
+                        .style("font-size", ".75rem");
 
                     var bottomAxis = d3.select("#bottom-axis")
                         .attr("width", width)
@@ -308,7 +362,10 @@
 
                     bottomAxis.append("g")
                         .attr("transform", `translate(${margins.left}, 0)`)
-                        .call(d3.axisBottom(x));
+                        .call(d3.axisBottom(x))
+                        .selectAll("text")
+                        .style("font-family", "Crimson Text, serif")
+                        .style("font-size", ".75rem");
 
                     var tooltip = d3.select(".tooltip");
 
@@ -381,9 +438,19 @@
                                 tooltipHTML += `Years Lived: ${d.lifespan}<br>`;
                             }
 
+                            // adjust the tooltip position to show above or below cursor depending on position on the screen
+                            var tooltipWidth = tooltip.node().getBoundingClientRect().width;
+                            var tooltipHeight = tooltip.node().getBoundingClientRect().height;
+                            var xPosition = event.pageX - tooltipWidth / 2;
+                            var yPosition = event.pageY - tooltipHeight - 16;
+
+                            if (event.pageY < window.innerHeight / 1.9) {
+                                yPosition = event.pageY + 16;
+                            }
+
                             tooltip.html(tooltipHTML)
-                                .style("left", (event.pageX) + "px")
-                                .style("top", (event.pageY - 28) + "px");
+                                .style("left", xPosition + "px")
+                                .style("top", yPosition + "px");
 
                             d3.select(this).attr("opacity", 0.7);
                         })

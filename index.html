@@ -214,16 +214,23 @@
             d3.csv(csv).then(function (data) {
                 data = data.filter(function (d) {
                     var years = d["Dublin Core:Date"].split("-");
-                    var birthYear = parseInt(years[0]);
+                    var birthYear = years[0];
                     var deathYear = years[1];
 
+                    // skip entries that have an unknown birth year
+                    if (birthYear.toLowerCase() === "unknown" || birthYear === "") {
+                        return false;
+                    }
+
+                    birthYear = parseInt(years[0]);
+
                     // skip entries that have an unknown death year
-                    if (deathYear === "unknown") {
+                    if (deathYear.toLowerCase() === "unknown" || deathYear === "") {
                         return false;
                     }
 
                     // make the year the current year if the death year is listed as present
-                    if (deathYear === "present") {
+                    if (deathYear.includes("present")) {
                         deathYear = new Date().getFullYear();
                     }
                     else {
@@ -240,9 +247,8 @@
                 // create sort dropdown
                 // credit: https://dev.to/learningmonk/sortable-bar-chart-with-d3-js-k3b
 
-
                 data.sort((a, b) => {
-                    return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
+                    return d3.ascending(String(a["Dublin Core:Title"].trim()), String(b["Dublin Core:Title"].trim()))
                 });
 
                 document.addEventListener("DOMContentLoaded", createChronology());
@@ -254,13 +260,13 @@
                     var selected = d3.select(this).node().value;
                     if (selected == "Alphabetically") {
                         data.sort((a, b) => {
-                            return d3.ascending(String(a["Dublin Core:Title"]), String(b["Dublin Core:Title"]))
+                            return d3.ascending(String(a["Dublin Core:Title"].trim()), String(b["Dublin Core:Title"].trim()))
                         })
-                        console.log(data)
                     } else if (selected == "Ascending Birth Year") {
                         data.sort((a, b) => {
                             return d3.ascending(a.birth_year, b.birth_year)
                         })
+                        console.log(data)
                     } else if (selected == "Descending Birth Year") {
                         data.sort((a, b) => {
                             return d3.descending(a.birth_year, b.birth_year)
@@ -388,6 +394,7 @@
                     });
 
                     // add a bar for each author and make it span their birth to death year
+                    console.log(data)
                     svg.selectAll(".author")
                         .data(data)
                         .enter().append("rect")

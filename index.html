@@ -37,7 +37,7 @@
             font-family: "Crimson Text", serif;
             font-weight: 700;
             font-style: normal;
-            line-height: 0;
+            line-height: 2rem;
         }
 
         select {
@@ -70,6 +70,24 @@
             display: flex;
             flex-direction: row;
             gap: 2rem;
+        }
+
+        @media screen and (max-width: 1060px) {
+            #select-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            #data-container {
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            body {
+                overflow-y: scroll;
+            }
         }
 
         .dropdown {
@@ -340,8 +358,9 @@
                     var chronology = document.createElement("div");
                     var svg = d3.select(chronology)
                         .append("svg")
-                        .attr("width", width)
-                        .attr("height", innerHeight)
+                        .attr("width", "100%")
+                        .attr("height", "100%")
+                        .attr("viewBox", "0 0 " + width + " " + innerHeight)
                         .call(zoom);
 
                     // create top and bottom year axes
@@ -355,7 +374,8 @@
                         .padding(0.1);
 
                     var topAxis = d3.select("#top-axis")
-                        .attr("width", width)
+                        .attr("width", "100%")
+                        .attr("viewBox", "0 0 " + width + " " + margins.top)
                         .attr("height", margins.top);
 
                     topAxis.append("g")
@@ -366,7 +386,8 @@
                         .style("font-size", ".75rem");
 
                     var bottomAxis = d3.select("#bottom-axis")
-                        .attr("width", width)
+                        .attr("width", "100%")
+                        .attr("viewBox", "0 0 " + width + " " + margins.bottom)
                         .attr("height", margins.bottom);
 
                     bottomAxis.append("g")

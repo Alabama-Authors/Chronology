@@ -145,15 +145,15 @@
             <div id="select-container">
                 <div id="sort-container" class="dropdown">
                     <p>Sort By</p>
-                    <div id="sort"></div>
+                    <div id="sort" tabindex="0"></div>
                 </div>
                 <div id="filter-container" class="dropdown">
                     <p>Filter By</p>
-                    <div id="filter"></div>
+                    <div id="filter" tabindex="0"></div>
                 </div>
                 <div id="view-container" class="dropdown">
                     <p>View</p>
-                    <div id="view"></div>
+                    <div id="view" tabindex="0"></div>
                 </div>
             </div>
         </div>
@@ -165,6 +165,7 @@
     <div class="tooltip" style="opacity: 0;"></div>
 
     <script>
+
         var sortDropdown = document.getElementById("sort");
         var sort = ["Alphabetically", "Ascending Birth Year", "Descending Birth Year", "Ascending Death Year", "Descending Death Year", "Ascending Lifespan", "Descending Lifespan"];
         d3.select(sortDropdown)
@@ -420,6 +421,7 @@
                         .data(data)
                         .enter().append("rect")
                         .attr("class", "author")
+                        .attr("tabindex", "0")
                         .attr("x", function (d) { return x(d.birth_year) + margins.left; })
                         .attr("y", function (d, i) { return y(d["Dublin Core:Title"]); })
                         .attr("width", function (d) { return x(d.death_year) - x(d.birth_year); })
@@ -443,54 +445,65 @@
                         })
                         // open author page on click
                         .on("click", function (event, d) {
-                            if (d["Item URI"]) {
-                                window.open(d["Item URI"], "_blank");
+                            openAuthorPage(d);
+                        })
+                        .on("keypress", function (event, d) {
+                            if (event.key === "Enter") {
+                                openAuthorPage(d);
                             }
                         })
-                        // add a tooltip with author info on hover
-                        .on("mouseover", function (event, d) {
-                            tooltip.transition()
-                                .duration(200)
-                                .style("opacity", 1);
-
-                            // display data if it exists
-                            var tooltipHTML = "";
-                            if (d["file"]) {
-                                if (csv === "authors.csv") {
-                                    tooltipHTML += `<img src="./images/${d["file"]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
-                                }
-                                else if (csv === "export.csv") {
-                                    var photos = d["file"].split(",");
-                                    tooltipHTML += `<img src="${photos[photos.length - 1]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
-                                }
-                            }
-                            tooltipHTML += `<strong>${d["Dublin Core:Title"]} (${d["Dublin Core:Date"]})</strong><br>`;
-                            if (d.lifespan) {
-                                tooltipHTML += `Years Lived: ${d.lifespan}<br>`;
-                            }
-
-                            // adjust the tooltip position to show above or below cursor depending on position on the screen
-                            var tooltipWidth = tooltip.node().getBoundingClientRect().width;
-                            var tooltipHeight = tooltip.node().getBoundingClientRect().height;
-                            var xPosition = event.pageX - tooltipWidth / 2;
-                            var yPosition = event.pageY - tooltipHeight - 16;
-
-                            if (event.pageY < window.innerHeight / 1.9) {
-                                yPosition = event.pageY + 16;
-                            }
-
-                            tooltip.html(tooltipHTML)
-                                .style("left", xPosition + "px")
-                                .style("top", yPosition + "px");
-
-                            d3.select(this).attr("opacity", 0.7);
-                        })
+                        .on("mouseover", handleTooltip)
+                        .on("focus", handleTooltip)
                         .on("mouseout", function (d) {
                             tooltip.transition()
                                 .duration(500)
                                 .style("opacity", 0);
                             d3.select(this).attr("opacity", 1);
                         });
+
+                    function handleTooltip(event, d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", 1);
+
+                        // display data if it exists
+                        var tooltipHTML = "";
+                        if (d["file"]) {
+                            if (csv === "authors.csv") {
+                                tooltipHTML += `<img src="./images/${d["file"]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
+                            }
+                            else if (csv === "export.csv") {
+                                var photos = d["file"].split(",");
+                                tooltipHTML += `<img src="${photos[photos.length - 1]}" width="200" alt="Photograph of Alabama author, ${d["Dublin Core:Title"]}"><br><br>`;
+                            }
+                        }
+                        tooltipHTML += `<strong>${d["Dublin Core:Title"]} (${d["Dublin Core:Date"]})</strong><br>`;
+                        if (d.lifespan) {
+                            tooltipHTML += `Years Lived: ${d.lifespan}<br>`;
+                        }
+
+                        // adjust the tooltip position to show above or below cursor depending on position on the screen
+                        var tooltipWidth = tooltip.node().getBoundingClientRect().width;
+                        var tooltipHeight = tooltip.node().getBoundingClientRect().height;
+                        var xPosition = event.pageX - tooltipWidth / 2;
+                        var yPosition = event.pageY - tooltipHeight - 16;
+
+                        if (event.pageY < window.innerHeight / 1.9) {
+                            yPosition = event.pageY + 16;
+                        }
+
+                        tooltip.html(tooltipHTML)
+                            .style("left", xPosition + "px")
+                            .style("top", yPosition + "px");
+
+                        d3.select(this).attr("opacity", 0.7);
+                    }
+
+                    function openAuthorPage(d) {
+                        if (d["Item URI"]) {
+                            window.open(d["Item URI"], "_blank");
+                        }
+                    }
 
                     // create new viz when a sort option is selected
                     var newChronology = document.getElementById("chronology");
